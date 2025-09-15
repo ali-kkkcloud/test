@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cautio Dashboard</title>
+    <link rel="icon" href="favicon.ico">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="stock.css">
     <link rel="stylesheet" href="inventory.css">
-    <title>Cautio Dashboard</title>
-    <link rel="icon" href="favicon.ico">
     
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -32,11 +34,15 @@
         </div>
     </div>
 
-    <!-- Login Page -->
-    <div id="loginPage" class="ml-5 min-h-screen flex-1 pr-6" style="padding-left:4.68rem;padding-top:0">
-        <div>
-            <div class="grid grid-cols-2">
-                <div class="relative flex items-center justify-center sm:mt-0">
+    <!-- ========================================
+         LOGIN PAGE
+         ======================================== -->
+    <div id="loginPage" class="min-h-screen flex items-center justify-center dark:bg-dark-fill-base-400">
+        <div class="w-full max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 min-h-screen">
+                <!-- Left Side - Login Form -->
+                <div class="relative flex items-center justify-center p-8">
+                    <!-- Background Lines -->
                     <div class="absolute inset-0 h-full px-[3.5rem]">
                         <div class="lines hidden sm:flex sm:h-full sm:w-full sm:justify-between">
                             <div class="line"></div>
@@ -45,6 +51,8 @@
                             <div class="line"></div>
                         </div>
                     </div>
+                    
+                    <!-- Login Form -->
                     <div class="relative w-full max-w-md mx-auto">
                         <div class="text-center mb-8">
                             <h1 class="text-display-1 dark:text-dark-base-600 mb-4">Welcome to Cautio</h1>
@@ -69,6 +77,7 @@
                     </div>
                 </div>
                 
+                <!-- Right Side - Branding -->
                 <div class="flex items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700">
                     <div class="text-center text-white p-8">
                         <h2 class="text-heading-3 mb-4">Customer Management</h2>
@@ -79,9 +88,14 @@
         </div>
     </div>
 
-    <!-- Dashboard Container -->
+    <!-- ========================================
+         DASHBOARD CONTAINER
+         ======================================== -->
     <div id="dashboardContainer" class="hidden min-h-screen dark:bg-dark-fill-base-400">
-        <!-- Enhanced Sidebar -->
+        
+        <!-- ========================================
+             SIDEBAR
+             ======================================== -->
         <div id="sidebar" class="sidebar collapsed fixed left-0 top-0 h-full dark:bg-dark-fill-base-300 dark:border-r dark:border-dark-stroke-contrast-400 z-40">
             <!-- Sidebar Header -->
             <div class="sidebar-header p-4 border-b dark:border-dark-stroke-contrast-400">
@@ -102,7 +116,7 @@
                 </div>
             </div>
 
-            <!-- Enhanced Menu Items -->
+            <!-- Menu Items -->
             <nav class="sidebar-nav flex-1 overflow-y-auto py-4">
                 <div class="px-2 space-y-2">
                     <a href="#" onclick="showCustomersOverview()" class="menu-item flex items-center p-3 rounded-lg hover:dark:bg-dark-fill-base-600 text-body-m-semibold dark:text-dark-base-600 hover:dark:text-dark-base-600 transition-all duration-200">
@@ -168,10 +182,14 @@
             </div>
         </div>
 
-        <!-- Main Content Area -->
+        <!-- ========================================
+             MAIN CONTENT AREA
+             ======================================== -->
         <div id="mainContent" class="main-content sidebar-collapsed">
             <div class="p-6">
-                <!-- Top Header with Search and Customer Names -->
+                <!-- ========================================
+                     TOP HEADER WITH SEARCH
+                     ======================================== -->
                 <div class="flex items-center justify-between mb-8">
                     <!-- Search Bar -->
                     <div class="flex-1 max-w-md relative">
@@ -221,11 +239,11 @@
                     </div>
                 </div>
 
-                <!-- Content Areas -->
-                
-                <!-- Customers Overview Content -->
+                <!-- ========================================
+                     CUSTOMERS OVERVIEW CONTENT
+                     ======================================== -->
                 <div id="customersOverviewContent">
-                    <!-- Enhanced Total Customers Count -->
+                    <!-- Total Customers Count -->
                     <div class="text-center mb-8">
                         <div onclick="showAllTab()" class="inline-block px-8 py-6 rounded-xl dark:bg-dark-fill-base-300 dark:border dark:border-dark-stroke-contrast-400 cursor-pointer hover:dark:bg-dark-fill-base-600 transition-all duration-300 hover:scale-105 hover:shadow-2xl">
                             <h2 class="text-heading-5 dark:text-dark-base-600 mb-3">Total Approved Customers</h2>
@@ -234,7 +252,7 @@
                         </div>
                     </div>
 
-                    <!-- Enhanced Dashboard Tabs -->
+                    <!-- Dashboard Tabs -->
                     <div class="mb-6">
                         <div class="flex items-center justify-between mb-6">
                             <div class="enhanced-tabs flex space-x-1 p-1 rounded-2xl dark:bg-dark-fill-base-300/50 backdrop-blur-sm border dark:border-dark-stroke-contrast-400/30">
@@ -272,7 +290,7 @@
                             <div id="allCustomersList" class="space-y-2">
                                 <!-- All customers will be populated here -->
                             </div>
-                            <div id="allEmptyState" class="text-center py-16">
+                            <div id="allEmptyState" class="text-center py-16" style="display: none;">
                                 <div class="empty-state-icon mb-6">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -296,7 +314,7 @@
                             <div id="pocCustomersList" class="space-y-2">
                                 <!-- POC customers will be populated here -->
                             </div>
-                            <div id="pocEmptyState" class="text-center py-16">
+                            <div id="pocEmptyState" class="text-center py-16" style="display: none;">
                                 <div class="empty-state-icon mb-6">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -320,7 +338,7 @@
                             <div id="onboardedCustomersList" class="space-y-2">
                                 <!-- Onboarded customers will be populated here -->
                             </div>
-                            <div id="onboardedEmptyState" class="text-center py-16">
+                            <div id="onboardedEmptyState" class="text-center py-16" style="display: none;">
                                 <div class="empty-state-icon mb-6">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -345,7 +363,7 @@
                             <div id="closedCustomersList" class="space-y-2">
                                 <!-- Closed customers will be populated here -->
                             </div>
-                            <div id="closedEmptyState" class="text-center py-16">
+                            <div id="closedEmptyState" class="text-center py-16" style="display: none;">
                                 <div class="empty-state-icon mb-6">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -366,7 +384,7 @@
                             <div id="ongoingLeadsList" class="space-y-2">
                                 <!-- Ongoing leads will be populated here -->
                             </div>
-                            <div id="ongoingLeadsEmptyState" class="text-center py-16">
+                            <div id="ongoingLeadsEmptyState" class="text-center py-16" style="display: none;">
                                 <div class="empty-state-icon mb-6">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -381,7 +399,9 @@
                     </div>
                 </div>
 
-                <!-- Stock Content -->
+                <!-- ========================================
+                     STOCK CONTENT
+                     ======================================== -->
                 <div id="stockContent" class="hidden">
                     <div class="mb-8">
                         <h2 class="text-heading-5 dark:text-dark-base-600 mb-2">Stock Management</h2>
@@ -460,11 +480,26 @@
                     </div>
                 </div>
 
-                <!-- Inventory Management Content -->
+                <!-- ========================================
+                     INVENTORY MANAGEMENT CONTENT
+                     ======================================== -->
                 <div id="inventoryManagementContent" class="hidden">
                     <div class="mb-8">
                         <h2 class="text-heading-5 dark:text-dark-base-600 mb-2">Inventory Management</h2>
                         <p class="text-body-l-regular dark:text-dark-base-500">Manage device inward and outward operations</p>
+                    </div>
+
+                    <!-- Inventory Search -->
+                    <div class="mb-6">
+                        <div class="flex-1 max-w-md relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="dark:text-dark-base-500">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="m21 21-4.35-4.35"/>
+                                </svg>
+                            </div>
+                            <input type="text" id="inventorySearchInput" placeholder="Search inventory..." class="w-full pl-10 pr-4 py-3 rounded-lg border dark:border-dark-stroke-contrast-400 dark:bg-dark-fill-base-400 dark:text-dark-base-600 dark:focus:border-brand-blue-600 outline-none transition-colors duration-200">
+                        </div>
                     </div>
 
                     <!-- Inventory Tabs -->
@@ -499,7 +534,7 @@
                             <div id="inwardDevicesList" class="space-y-2">
                                 <!-- Inward devices will be populated here -->
                             </div>
-                            <div id="inwardEmptyState" class="text-center py-16">
+                            <div id="inwardEmptyState" class="text-center py-16" style="display: none;">
                                 <div class="empty-state-icon mb-6">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
@@ -528,7 +563,7 @@
                             <div id="outwardDevicesList" class="space-y-2">
                                 <!-- Outward devices will be populated here -->
                             </div>
-                            <div id="outwardEmptyState" class="text-center py-16">
+                            <div id="outwardEmptyState" class="text-center py-16" style="display: none;">
                                 <div class="empty-state-icon mb-6">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
@@ -543,7 +578,9 @@
                     </div>
                 </div>
 
-                <!-- Finance Content -->
+                <!-- ========================================
+                     FINANCE CONTENT
+                     ======================================== -->
                 <div id="financeContent" class="hidden">
                     <div class="mb-8">
                         <h2 class="text-heading-5 dark:text-dark-base-600 mb-2">Finance Management</h2>
@@ -574,7 +611,7 @@
                         <div id="pendingApprovalsList" class="p-4">
                             <!-- Pending approvals will be populated here -->
                         </div>
-                        <div id="financeEmptyState" class="text-center py-16">
+                        <div id="financeEmptyState" class="text-center py-16" style="display: none;">
                             <div class="empty-state-icon mb-6">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mx-auto dark:text-dark-base-500">
                                     <line x1="12" y1="1" x2="12" y2="23"/>
@@ -587,7 +624,9 @@
                     </div>
                 </div>
 
-                <!-- Ground Operations Content -->
+                <!-- ========================================
+                     GROUND OPERATIONS CONTENT
+                     ======================================== -->
                 <div id="groundOperationsContent" class="hidden">
                     <div class="mb-8">
                         <h2 class="text-heading-5 dark:text-dark-base-600 mb-2">Ground Operations</h2>
@@ -605,7 +644,9 @@
                     </div>
                 </div>
 
-                <!-- Add Credentials Content -->
+                <!-- ========================================
+                     ADD CREDENTIALS CONTENT
+                     ======================================== -->
                 <div id="addCredentialsContent" class="hidden">
                     <div class="mb-8">
                         <h2 class="text-heading-5 dark:text-dark-base-600 mb-2">Add Credentials</h2>
@@ -628,7 +669,9 @@
             </div>
         </div>
 
-        <!-- Floating Action Button (Plus Sign) -->
+        <!-- ========================================
+             FLOATING ACTION BUTTON
+             ======================================== -->
         <div class="fixed bottom-6 right-6 z-50">
             <div class="relative">
                 <button id="addButton" onclick="toggleAddMenu()" class="w-14 h-14 rounded-full dark:bg-brand-blue-600 dark:text-utility-white hover:dark:bg-brand-blue-500 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-110">
@@ -663,7 +706,10 @@
         </div>
     </div>
 
-    <!-- Include all modals from previous version -->
+    <!-- ========================================
+         MODALS
+         ======================================== -->
+    
     <!-- Add Lead Form Modal -->
     <div id="addLeadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
         <div class="dark:bg-dark-fill-base-300 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
@@ -880,23 +926,6 @@
                     </div>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="emailToast" class="fixed top-4 right-4 hidden z-50">
-        <div class="dark:bg-dark-fill-base-300 dark:border dark:border-dark-stroke-contrast-400 rounded-lg p-4 shadow-lg max-w-sm">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="dark:text-dark-success-600">
-                        <path d="M9 12l2 2 4-4"/>
-                        <circle cx="12" cy="12" r="10"/>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <p id="toastMessage" class="text-body-m-regular dark:text-dark-base-600"></p>
-                </div>
-            </div>
         </div>
     </div>
 

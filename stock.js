@@ -1,16 +1,25 @@
 // ====================================
-// STOCK MANAGEMENT FUNCTIONS
+// STOCK MANAGEMENT - COMPLETE FIXED VERSION
 // ====================================
 
 // Global variables for stock
 let stockDevices = [];
 let filteredStockDevices = [];
-let stockSearchTimeout = null;
 let currentStockImportType = null;
+let stockSearchTimeout = null;
+
+// Stock status options
+const STOCK_STATUSES = [
+    { value: 'available', label: 'Available', class: 'available' },
+    { value: 'assigned', label: 'Assigned', class: 'assigned' },
+    { value: 'maintenance', label: 'Maintenance', class: 'maintenance' },
+    { value: 'defective', label: 'Defective', class: 'defective' },
+    { value: 'returned', label: 'Returned', class: 'returned' }
+];
 
 // Initialize stock management
 function initializeStockManagement() {
-    console.log('📦 Initializing Stock Management...');
+    console.log('🔧 Initializing Stock Management...');
     setupStockEventListeners();
     loadStockData();
     setupStockRealtimeListeners();
@@ -18,24 +27,6 @@ function initializeStockManagement() {
 
 // Setup stock event listeners
 function setupStockEventListeners() {
-    // Add single device form
-    const addStockForm = document.getElementById('addStockForm');
-    if (addStockForm) {
-        addStockForm.addEventListener('submit', handleAddSingleStock);
-    }
-
-    // CSV import form
-    const importStockCSVForm = document.getElementById('importStockCSVForm');
-    if (importStockCSVForm) {
-        importStockCSVForm.addEventListener('submit', handleImportStockCSV);
-    }
-
-    // File input handler
-    const stockCSVFile = document.getElementById('stockCSVFile');
-    if (stockCSVFile) {
-        stockCSVFile.addEventListener('change', handleStockCSVFileSelect);
-    }
-
     // Search functionality
     const stockSearchInput = document.getElementById('stockSearchInput');
     if (stockSearchInput) {
@@ -61,13 +52,9 @@ function setupStockRealtimeListeners() {
     console.log('🔄 Stock realtime listeners set up');
 }
 
-// Show stock content
-function showStock() {
-    hideAllContent();
-    document.getElementById('stockContent').classList.remove('hidden');
-    updateMenuHighlight('stock');
-    loadStockData();
-}
+// ====================================
+// DATA LOADING FUNCTIONS
+// ====================================
 
 // Load stock data
 async function loadStockData() {
@@ -85,24 +72,34 @@ async function loadStockData() {
         stockDevices = data || [];
         filteredStockDevices = [...stockDevices];
         
+        console.log(`📦 Loaded ${stockDevices.length} stock devices`);
+        
         updateStockStats();
         updateStockTable();
         
-        console.log(`📦 Loaded ${stockDevices.length} stock devices`);
     } catch (error) {
         console.error('❌ Error loading stock data:', error);
-        showStockToast('Error loading stock data', 'error');
+        // Create mock data for development
+        stockDevices = [];
+        filteredStockDevices = [];
+        updateStockStats();
+        updateStockTable();
+        showStockToast('Error loading stock data. Using offline mode.', 'error');
     }
 }
+
+// ====================================
+// UI UPDATE FUNCTIONS
+// ====================================
 
 // Update stock statistics
 function updateStockStats() {
     const totalStock = stockDevices.length;
-    const availableStock = stockDevices.filter(device => device.current_status === 'available').length;
-    const allocatedStock = stockDevices.filter(device => device.current_status === 'allocated').length;
-    const returnedStock = stockDevices.filter(device => device.current_status === 'returned').length;
+    const availableStock = stockDevices.filter(d => d.current_status === 'available').length;
+    const allocatedStock = stockDevices.filter(d => d.current_status === 'assigned').length;
+    const returnedStock = stockDevices.filter(d => d.current_status === 'returned').length;
     
-    // Update stat displays
+    // Update stat cards
     const totalStockEl = document.getElementById('totalStockCount');
     const availableStockEl = document.getElementById('availableStockCount');
     const allocatedStockEl = document.getElementById('allocatedStockCount');
@@ -118,21 +115,19 @@ function updateStockStats() {
 function updateStockTable() {
     const tableBody = document.getElementById('stockTableBody');
     const emptyState = document.getElementById('stockEmptyState');
-    const tableContainer = document.querySelector('.stock-table-container');
     
     if (!tableBody || !emptyState) return;
-
+    
     if (filteredStockDevices.length === 0) {
-        if (tableContainer) tableContainer.style.display = 'none';
+        tableBody.innerHTML = '';
         emptyState.style.display = 'block';
     } else {
-        if (tableContainer) tableContainer.style.display = 'block';
         emptyState.style.display = 'none';
         tableBody.innerHTML = filteredStockDevices.map(device => createStockTableRow(device)).join('');
     }
 }
 
-// Create stock table row
+// Create stock table row - ENHANCED
 function createStockTableRow(device) {
     const formatDate = (dateString) => {
         if (!dateString) return 'Not set';
@@ -140,13 +135,9 @@ function createStockTableRow(device) {
     };
 
     const getStatusBadge = (status) => {
-        const statusClasses = {
-            'available': 'stock-status-badge available',
-            'allocated': 'stock-status-badge allocated',
-            'returned': 'stock-status-badge returned'
-        };
-        
-        return `<span class="${statusClasses[status] || 'stock-status-badge'}">${status}</span>`;
+        const statusInfo = STOCK_STATUSES.find(s => s.value === status) || 
+                          { class: 'available', label: status };
+        return `<span class="stock-status-badge ${statusInfo.class}">${statusInfo.label}</span>`;
     };
 
     return `
@@ -181,23 +172,16 @@ function createStockTableRow(device) {
     `;
 }
 
-// Show add stock form
-function showAddStockForm() {
-    const modal = document.getElementById('addStockModal');
-    if (!modal) {
-        createAddStockModal();
-    } else {
-        modal.classList.remove('hidden');
-    }
-}
+// ====================================
+// ADD STOCK DEVICE FUNCTIONS
+// ====================================
 
-// Create add stock modal
-function createAddStockModal() {
+function showAddStockForm() {
     const modalHTML = `
-        <div id="addStockModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div class="dark:bg-dark-fill-base-300 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div id="addStockModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 stock-modal">
+            <div class="stock-modal-content rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-heading-6 dark:text-dark-base-600">Add Single Device to Stock</h2>
+                    <h2 class="text-heading-6 dark:text-dark-base-600">Add Stock Device</h2>
                     <button onclick="closeAddStockForm()" class="p-2 rounded-lg hover:dark:bg-dark-fill-base-600">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="dark:text-dark-base-600">
                             <path d="m18 6-12 12"/>
@@ -206,8 +190,8 @@ function createAddStockModal() {
                     </button>
                 </div>
                 
-                <form id="addStockForm" class="stock-form">
-                    <div class="stock-form-grid">
+                <form id="addStockForm" class="stock-form space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="stock-form-field">
                             <label class="stock-form-label">Sl. No.</label>
                             <input type="number" name="slNo" class="stock-form-input" placeholder="Enter serial number">
@@ -219,17 +203,17 @@ function createAddStockModal() {
                         </div>
                         
                         <div class="stock-form-field">
-                            <label class="stock-form-label">Batch No</label>
+                            <label class="stock-form-label">Batch No.</label>
                             <input type="text" name="batchNo" class="stock-form-input" placeholder="Enter batch number">
                         </div>
                         
                         <div class="stock-form-field">
                             <label class="stock-form-label">Inward Date</label>
-                            <input type="date" name="inwardDate" class="stock-form-input" required>
+                            <input type="date" name="inwardDate" class="stock-form-input">
                         </div>
                         
                         <div class="stock-form-field">
-                            <label class="stock-form-label">Device Model No *</label>
+                            <label class="stock-form-label">Device Model No. *</label>
                             <input type="text" name="deviceModelNo" class="stock-form-input" placeholder="Enter device model number" required>
                         </div>
                         
@@ -238,30 +222,16 @@ function createAddStockModal() {
                             <input type="text" name="deviceRegistrationNumber" class="stock-form-input" placeholder="Enter device registration number" required>
                         </div>
                         
-                        <div class="stock-form-field">
+                        <div class="stock-form-field md:col-span-2">
                             <label class="stock-form-label">Device IMEI *</label>
-                            <input type="text" name="deviceImei" class="stock-form-input" placeholder="Enter device IMEI" required>
-                        </div>
-                        
-                        <div class="stock-form-field">
-                            <label class="stock-form-label">Device Condition</label>
-                            <select name="deviceCondition" class="stock-form-select">
-                                <option value="new">New Device</option>
-                                <option value="good">Good</option>
-                                <option value="lense_issue">Lense Issue</option>
-                                <option value="sim_module_fail">SIM Module Fail</option>
-                                <option value="auto_restart">Auto Restart</option>
-                                <option value="device_tampered">Device Tampered</option>
-                                <option value="used">Used</option>
-                                <option value="refurbished">Refurbished</option>
-                                <option value="damaged">Damaged</option>
-                            </select>
+                            <input type="text" name="deviceImei" class="stock-form-input" placeholder="Enter device IMEI (15 digits)" pattern="[0-9]{15}" maxlength="15" required>
+                            <small class="text-body-s-regular dark:text-dark-base-500">Must be exactly 15 digits</small>
                         </div>
                     </div>
                     
-                    <div class="flex gap-4 mt-6">
-                        <button type="submit" class="stock-action-btn success">Add to Stock</button>
-                        <button type="button" onclick="closeAddStockForm()" class="stock-action-btn secondary">Cancel</button>
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">Add Stock Device</button>
+                        <button type="button" onclick="closeAddStockForm()" class="btn btn-secondary">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -271,8 +241,8 @@ function createAddStockModal() {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     document.getElementById('addStockModal').classList.remove('hidden');
     
-    // Set default date to today
-    const dateInput = document.querySelector('input[name="inwardDate"]');
+    // Set today's date as default
+    const dateInput = document.querySelector('#addStockForm input[name="inwardDate"]');
     if (dateInput) {
         dateInput.value = new Date().toISOString().split('T')[0];
     }
@@ -280,105 +250,110 @@ function createAddStockModal() {
     // Set up form handler
     const form = document.getElementById('addStockForm');
     if (form) {
-        form.addEventListener('submit', handleAddSingleStock);
+        form.addEventListener('submit', handleAddStockDevice);
     }
 }
 
-// Close add stock form
 function closeAddStockForm() {
     const modal = document.getElementById('addStockModal');
     if (modal) {
-        modal.classList.add('hidden');
-        const form = document.getElementById('addStockForm');
-        if (form) form.reset();
+        modal.remove();
     }
 }
 
-// Handle add single stock device
-async function handleAddSingleStock(e) {
+// ====================================
+// FORM HANDLERS
+// ====================================
+
+async function handleAddStockDevice(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const stockData = {
-        sl_no: parseInt(formData.get('slNo')) || null,
-        po_no: formData.get('poNo'),
-        batch_no: formData.get('batchNo'),
-        inward_date: formData.get('inwardDate'),
-        device_model_no: formData.get('deviceModelNo'),
-        device_registration_number: formData.get('deviceRegistrationNumber'),
-        device_imei: formData.get('deviceImei'),
-        device_condition: formData.get('deviceCondition') || 'new',
-        current_status: 'available',
-        inventory_status: 'in_stock',
-        imported_by: userSession?.email || 'admin'
-    };
-
+    const deviceModelNo = formData.get('deviceModelNo').trim();
+    const deviceRegistrationNumber = formData.get('deviceRegistrationNumber').trim();
+    const deviceImei = formData.get('deviceImei').trim();
+    
+    // Validation
+    if (!deviceModelNo || !deviceRegistrationNumber || !deviceImei) {
+        showStockToast('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    // IMEI validation - must be exactly 15 digits
+    if (!/^\d{15}$/.test(deviceImei)) {
+        showStockToast('IMEI must be exactly 15 digits', 'error');
+        return;
+    }
+    
     try {
-        showStockToast('Adding device to stock...', 'info');
-        
         // Check for duplicate registration number
-        const { data: existingDevice, error: checkError } = await supabase
+        const { data: existingDevice } = await supabase
             .from('stock')
             .select('*')
-            .eq('device_registration_number', stockData.device_registration_number)
+            .eq('device_registration_number', deviceRegistrationNumber)
             .single();
 
         if (existingDevice) {
-            showStockToast('Device with this registration number already exists', 'error');
+            showStockToast(`Device with registration number "${deviceRegistrationNumber}" already exists`, 'error');
             return;
         }
-
+        
         // Check for duplicate IMEI
-        const { data: existingImei, error: imeiError } = await supabase
+        const { data: existingImei } = await supabase
             .from('stock')
             .select('*')
-            .eq('device_imei', stockData.device_imei)
+            .eq('device_imei', deviceImei)
             .single();
 
         if (existingImei) {
-            showStockToast('Device with this IMEI already exists', 'error');
+            showStockToast(`Device with IMEI "${deviceImei}" already exists`, 'error');
             return;
         }
-
-        const { data, error } = await supabase
+        
+        // Prepare stock data
+        const stockData = {
+            sl_no: parseInt(formData.get('slNo')) || null,
+            po_no: formData.get('poNo').trim() || '',
+            batch_no: formData.get('batchNo').trim() || '',
+            inward_date: formData.get('inwardDate') || new Date().toISOString().split('T')[0],
+            device_model_no: deviceModelNo,
+            device_registration_number: deviceRegistrationNumber,
+            device_imei: deviceImei,
+            device_condition: 'new',
+            current_status: 'available',
+            inventory_status: 'in_stock',
+            imported_by: window.userSession?.email || 'admin'
+        };
+        
+        const { data: stockDevice, error } = await supabase
             .from('stock')
-            .insert([stockData]);
+            .insert([stockData])
+            .select()
+            .single();
 
         if (error) {
             console.error('❌ Error adding stock device:', error);
             showStockToast('Error adding device: ' + error.message, 'error');
             return;
         }
-
-        showStockToast('Device added to stock successfully!', 'success');
+        
+        showStockToast('Stock device added successfully', 'success');
         closeAddStockForm();
         loadStockData();
         
-        // Automatically add to inward if device was added to stock
-        await autoAddToInward(stockData);
+        // Auto-add to inward inventory
+        await autoAddToInward(stockDevice, stockData);
         
     } catch (error) {
         console.error('❌ Error adding stock device:', error);
-        showStockToast('Error adding device to stock', 'error');
+        showStockToast('Error adding device', 'error');
     }
 }
 
-// Automatically add device to inward when added to stock
-async function autoAddToInward(stockData) {
+// Auto-add device to inward inventory when added to stock
+async function autoAddToInward(stockDevice, stockData) {
     try {
-        // Get the stock device that was just created
-        const { data: stockDevice, error: stockError } = await supabase
-            .from('stock')
-            .select('*')
-            .eq('device_registration_number', stockData.device_registration_number)
-            .single();
-
-        if (stockError || !stockDevice) {
-            console.error('❌ Error finding created stock device:', stockError);
-            return;
-        }
-
-        // Add to inward devices automatically
+        // Add to inward inventory
         const { error: inwardError } = await supabase
             .from('inward_devices')
             .insert([{
@@ -387,13 +362,12 @@ async function autoAddToInward(stockData) {
                 device_condition: stockData.device_condition,
                 inward_date: stockData.inward_date || new Date().toISOString().split('T')[0],
                 stock_id: stockDevice.id,
-                processed_by: userSession?.email || 'admin',
+                processed_by: window.userSession?.email || 'admin',
                 notes: 'Auto-added from stock'
             }]);
 
         if (inwardError) {
             console.error('❌ Error auto-adding to inward:', inwardError);
-            // Don't show error to user as the main operation (adding to stock) was successful
         } else {
             console.log('✅ Device automatically added to inward inventory');
         }
@@ -403,24 +377,16 @@ async function autoAddToInward(stockData) {
     }
 }
 
-// Show import stock CSV
+// ====================================
+// CSV IMPORT FUNCTIONS - ENHANCED
+// ====================================
+
 function showImportStockCSV() {
     currentStockImportType = 'stock';
     showStockCSVImportModal();
 }
 
-// Show stock CSV import modal
 function showStockCSVImportModal() {
-    const modal = document.getElementById('importStockCSVModal');
-    if (!modal) {
-        createStockCSVImportModal();
-    } else {
-        modal.classList.remove('hidden');
-    }
-}
-
-// Create stock CSV import modal
-function createStockCSVImportModal() {
     const modalHTML = `
         <div id="importStockCSVModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="dark:bg-dark-fill-base-300 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -436,7 +402,7 @@ function createStockCSVImportModal() {
                 
                 <div class="mb-6">
                     <h3 class="text-body-l-semibold dark:text-dark-base-600 mb-2">CSV Format Requirements</h3>
-                    <p class="text-body-m-regular dark:text-dark-base-500 mb-2">Your CSV file should contain the following columns:</p>
+                    <p class="text-body-m-regular dark:text-dark-base-500 mb-2">Your CSV file should contain the following columns (in this exact order):</p>
                     <code class="bg-gray-100 dark:bg-dark-fill-base-400 p-2 rounded text-sm block">
                         Sl. No., PO No, Batch No., Inward Date, Device Model No., Device Registration Number, Device IMEI
                     </code>
@@ -470,32 +436,26 @@ function createStockCSVImportModal() {
                                 </svg>
                             </div>
                             <div class="file-info-details">
-                                <h4 id="stockFileName"></h4>
-                                <p id="stockFileSize"></p>
+                                <div class="file-info-name"></div>
+                                <div class="file-info-size"></div>
                             </div>
                         </div>
-                        <button type="button" onclick="clearStockSelectedFile()" class="file-remove-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="m18 6-12 12"/>
-                                <path d="m6 6 12 12"/>
-                            </svg>
-                        </button>
                     </div>
                     
-                    <div id="stockImportProgress" class="import-progress hidden">
+                    <div id="stockImportProgress" class="hidden">
                         <div class="progress-bar">
-                            <div class="progress-bar-fill" id="stockProgressFill" style="width: 0%"></div>
+                            <div id="stockProgressFill" class="progress-bar-fill" style="width: 0%"></div>
                         </div>
-                        <p class="progress-text" id="stockProgressText">Processing...</p>
+                        <p id="stockProgressText" class="text-center text-body-m-regular dark:text-dark-base-600 mt-2">Processing...</p>
                     </div>
                     
                     <div id="stockImportResults" class="import-results hidden">
                         <!-- Results will be populated here -->
                     </div>
                     
-                    <div class="flex gap-4">
-                        <button type="submit" class="stock-action-btn success" id="stockImportBtn" disabled>Import CSV</button>
-                        <button type="button" onclick="closeStockCSVImportModal()" class="stock-action-btn secondary">Cancel</button>
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">Import CSV</button>
+                        <button type="button" onclick="closeStockCSVImportModal()" class="btn btn-secondary">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -503,85 +463,102 @@ function createStockCSVImportModal() {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    document.getElementById('importStockCSVModal').classList.remove('hidden');
     
-    // Set up event handlers
-    setupStockCSVImportHandlers();
-}
-
-// Setup stock CSV import handlers
-function setupStockCSVImportHandlers() {
+    // Set up file input handler
     const fileInput = document.getElementById('stockCSVFile');
-    const form = document.getElementById('importStockCSVForm');
-    const dropArea = document.getElementById('stockCSVDropArea');
-    
     if (fileInput) {
         fileInput.addEventListener('change', handleStockCSVFileSelect);
     }
     
+    // Set up form handler
+    const form = document.getElementById('importStockCSVForm');
     if (form) {
         form.addEventListener('submit', handleImportStockCSV);
     }
     
-    if (dropArea) {
-        // Drag and drop handlers
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.classList.add('dragover');
-        });
-        
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.classList.remove('dragover');
-        });
-        
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleStockCSVFileSelect({ target: fileInput });
-            }
-        });
+    // Set up drag and drop
+    setupStockCSVDragDrop();
+}
+
+function setupStockCSVDragDrop() {
+    const dropArea = document.getElementById('stockCSVDropArea');
+    if (!dropArea) return;
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.add('dragover'), false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragover'), false);
+    });
+    
+    dropArea.addEventListener('drop', handleStockCSVDrop, false);
+}
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function handleStockCSVDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+        const fileInput = document.getElementById('stockCSVFile');
+        if (fileInput) {
+            fileInput.files = files;
+            handleStockCSVFileSelect({ target: fileInput });
+        }
     }
 }
 
-// Handle stock CSV file selection
 function handleStockCSVFileSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
     
-    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-        showStockToast('Please select a valid CSV file', 'error');
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        showStockToast('Please select a CSV file', 'error');
+        clearStockSelectedFile();
         return;
     }
     
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        showStockToast('File size must be less than 10MB', 'error');
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+        showStockToast('File size too large. Maximum 10MB allowed.', 'error');
+        clearStockSelectedFile();
         return;
     }
     
     // Show file info
-    document.getElementById('stockFileName').textContent = file.name;
-    document.getElementById('stockFileSize').textContent = formatStockFileSize(file.size);
-    document.getElementById('stockFileInfo').classList.remove('hidden');
-    document.getElementById('stockImportBtn').disabled = false;
+    const fileInfo = document.getElementById('stockFileInfo');
+    const fileName = fileInfo.querySelector('.file-info-name');
+    const fileSize = fileInfo.querySelector('.file-info-size');
+    
+    if (fileInfo && fileName && fileSize) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatStockFileSize(file.size);
+        fileInfo.classList.remove('hidden');
+    }
 }
 
-// Clear selected file
 function clearStockSelectedFile() {
-    document.getElementById('stockCSVFile').value = '';
-    document.getElementById('stockFileInfo').classList.add('hidden');
-    document.getElementById('stockImportBtn').disabled = true;
-    document.getElementById('stockImportResults').classList.add('hidden');
+    const fileInput = document.getElementById('stockCSVFile');
+    const fileInfo = document.getElementById('stockFileInfo');
+    
+    if (fileInput) fileInput.value = '';
+    if (fileInfo) fileInfo.classList.add('hidden');
 }
 
-// Close stock CSV import modal
 function closeStockCSVImportModal() {
     const modal = document.getElementById('importStockCSVModal');
     if (modal) {
-        modal.classList.add('hidden');
-        clearStockSelectedFile();
+        modal.remove();
     }
 }
 
@@ -611,7 +588,7 @@ async function handleImportStockCSV(e) {
         
         showStockImportProgress(20, 'Validating data...');
         
-        await processStockCSV(parsedData);
+        await processStockCSV(parsedData, file);
         
     } catch (error) {
         console.error('❌ Error importing stock CSV:', error);
@@ -621,7 +598,7 @@ async function handleImportStockCSV(e) {
 }
 
 // Process stock CSV data
-async function processStockCSV(data) {
+async function processStockCSV(data, file) {
     const results = {
         total: data.length,
         successful: 0,
@@ -671,6 +648,11 @@ async function processStockRow(row, rowNumber, results) {
         throw new Error('Missing required fields: Device Model No., Device Registration Number, and Device IMEI');
     }
     
+    // IMEI validation
+    if (!/^\d{15}$/.test(deviceImei)) {
+        throw new Error(`Invalid IMEI format: "${deviceImei}". Must be exactly 15 digits.`);
+    }
+    
     // Check for duplicate registration number
     const { data: existingDevice } = await supabase
         .from('stock')
@@ -705,7 +687,7 @@ async function processStockRow(row, rowNumber, results) {
         device_condition: 'new',
         current_status: 'available',
         inventory_status: 'in_stock',
-        imported_by: userSession?.email || 'admin'
+        imported_by: window.userSession?.email || 'admin'
     };
     
     const { data: stockDevice, error } = await supabase
@@ -718,23 +700,281 @@ async function processStockRow(row, rowNumber, results) {
         throw new Error(error.message);
     }
     
-    // Auto-add to inward devices
-    await supabase
-        .from('inward_devices')
-        .insert([{
-            device_registration_number: deviceRegistrationNumber,
-            device_imei: deviceImei,
-            device_condition: 'new',
-            inward_date: inwardDate || new Date().toISOString().split('T')[0],
-            stock_id: stockDevice.id,
-            processed_by: userSession?.email || 'admin',
-            notes: 'Auto-added from stock CSV import'
-        }]);
+    // Auto-add to inward inventory
+    try {
+        await supabase
+            .from('inward_devices')
+            .insert([{
+                device_registration_number: stockData.device_registration_number,
+                device_imei: stockData.device_imei,
+                device_condition: stockData.device_condition,
+                inward_date: stockData.inward_date || new Date().toISOString().split('T')[0],
+                stock_id: stockDevice.id,
+                processed_by: window.userSession?.email || 'admin',
+                notes: 'Auto-added from stock'
+            }]);
+    } catch (inwardError) {
+        console.error('❌ Error auto-adding to inward:', inwardError);
+    }
     
     results.successful++;
 }
 
-// Utility functions for stock
+// ====================================
+// STOCK ACTIONS
+// ====================================
+
+async function editStockDevice(deviceId) {
+    const device = stockDevices.find(d => d.id === deviceId);
+    if (!device) {
+        showStockToast('Device not found', 'error');
+        return;
+    }
+    
+    const modalHTML = `
+        <div id="editStockModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 stock-modal">
+            <div class="stock-modal-content rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-heading-6 dark:text-dark-base-600">Edit Stock Device</h2>
+                    <button onclick="closeEditStockForm()" class="p-2 rounded-lg hover:dark:bg-dark-fill-base-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="dark:text-dark-base-600">
+                            <path d="m18 6-12 12"/>
+                            <path d="m6 6 12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="editStockForm" class="stock-form space-y-4">
+                    <input type="hidden" name="deviceId" value="${device.id}">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="stock-form-field">
+                            <label class="stock-form-label">Sl. No.</label>
+                            <input type="number" name="slNo" class="stock-form-input" value="${device.sl_no || ''}">
+                        </div>
+                        
+                        <div class="stock-form-field">
+                            <label class="stock-form-label">PO No</label>
+                            <input type="text" name="poNo" class="stock-form-input" value="${device.po_no || ''}">
+                        </div>
+                        
+                        <div class="stock-form-field">
+                            <label class="stock-form-label">Batch No.</label>
+                            <input type="text" name="batchNo" class="stock-form-input" value="${device.batch_no || ''}">
+                        </div>
+                        
+                        <div class="stock-form-field">
+                            <label class="stock-form-label">Inward Date</label>
+                            <input type="date" name="inwardDate" class="stock-form-input" value="${device.inward_date || ''}">
+                        </div>
+                        
+                        <div class="stock-form-field">
+                            <label class="stock-form-label">Device Model No. *</label>
+                            <input type="text" name="deviceModelNo" class="stock-form-input" value="${device.device_model_no}" required>
+                        </div>
+                        
+                        <div class="stock-form-field">
+                            <label class="stock-form-label">Current Status</label>
+                            <select name="currentStatus" class="stock-form-select">
+                                ${STOCK_STATUSES.map(status => 
+                                    `<option value="${status.value}" ${device.current_status === status.value ? 'selected' : ''}>${status.label}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="stock-form-field md:col-span-2">
+                            <label class="stock-form-label">Device Registration Number *</label>
+                            <input type="text" name="deviceRegistrationNumber" class="stock-form-input" value="${device.device_registration_number}" readonly>
+                            <small class="text-body-s-regular dark:text-dark-base-500">Registration number cannot be changed</small>
+                        </div>
+                        
+                        <div class="stock-form-field md:col-span-2">
+                            <label class="stock-form-label">Device IMEI *</label>
+                            <input type="text" name="deviceImei" class="stock-form-input" value="${device.device_imei}" readonly>
+                            <small class="text-body-s-regular dark:text-dark-base-500">IMEI cannot be changed</small>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">Update Device</button>
+                        <button type="button" onclick="closeEditStockForm()" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Set up form handler
+    const form = document.getElementById('editStockForm');
+    if (form) {
+        form.addEventListener('submit', handleEditStockDevice);
+    }
+}
+
+function closeEditStockForm() {
+    const modal = document.getElementById('editStockModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function handleEditStockDevice(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const deviceId = parseInt(formData.get('deviceId'));
+    
+    const updateData = {
+        sl_no: parseInt(formData.get('slNo')) || null,
+        po_no: formData.get('poNo').trim() || '',
+        batch_no: formData.get('batchNo').trim() || '',
+        inward_date: formData.get('inwardDate') || null,
+        device_model_no: formData.get('deviceModelNo').trim(),
+        current_status: formData.get('currentStatus')
+    };
+    
+    try {
+        const { error } = await supabase
+            .from('stock')
+            .update(updateData)
+            .eq('id', deviceId);
+
+        if (error) {
+            console.error('❌ Error updating stock device:', error);
+            showStockToast('Error updating device: ' + error.message, 'error');
+            return;
+        }
+        
+        showStockToast('Stock device updated successfully', 'success');
+        closeEditStockForm();
+        loadStockData();
+        
+    } catch (error) {
+        console.error('❌ Error updating stock device:', error);
+        showStockToast('Error updating device', 'error');
+    }
+}
+
+async function deleteStockDevice(deviceId) {
+    if (!confirm('Are you sure you want to delete this stock device? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('stock')
+            .delete()
+            .eq('id', deviceId);
+
+        if (error) {
+            console.error('❌ Error deleting stock device:', error);
+            showStockToast('Error deleting device: ' + error.message, 'error');
+            return;
+        }
+        
+        showStockToast('Stock device deleted successfully', 'success');
+        loadStockData();
+        
+    } catch (error) {
+        console.error('❌ Error deleting stock device:', error);
+        showStockToast('Error deleting device', 'error');
+    }
+}
+
+// ====================================
+// CSV EXPORT FUNCTION
+// ====================================
+
+function exportStockCSV() {
+    if (stockDevices.length === 0) {
+        showStockToast('No stock data to export', 'error');
+        return;
+    }
+    
+    try {
+        const headers = [
+            'Sl. No.',
+            'PO No',
+            'Batch No.',
+            'Inward Date',
+            'Device Model No.',
+            'Device Registration Number',
+            'Device IMEI',
+            'Current Status',
+            'Device Condition',
+            'Created At'
+        ];
+        
+        const csvContent = [
+            headers.join(','),
+            ...stockDevices.map(device => [
+                device.sl_no || '',
+                device.po_no || '',
+                device.batch_no || '',
+                device.inward_date || '',
+                device.device_model_no || '',
+                device.device_registration_number || '',
+                device.device_imei || '',
+                device.current_status || '',
+                device.device_condition || '',
+                device.created_at ? new Date(device.created_at).toLocaleDateString() : ''
+            ].map(field => `"${field}"`).join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `stock_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showStockToast('Stock data exported successfully', 'success');
+        
+    } catch (error) {
+        console.error('❌ Error exporting stock CSV:', error);
+        showStockToast('Error exporting data', 'error');
+    }
+}
+
+// ====================================
+// UTILITY FUNCTIONS
+// ====================================
+
+function handleStockSearch(e) {
+    clearTimeout(stockSearchTimeout);
+    const searchTerm = e.target.value.toLowerCase();
+    
+    stockSearchTimeout = setTimeout(() => {
+        // Filter stock devices
+        filteredStockDevices = stockDevices.filter(device => 
+            device.device_model_no.toLowerCase().includes(searchTerm) ||
+            device.device_registration_number.toLowerCase().includes(searchTerm) ||
+            device.device_imei.toLowerCase().includes(searchTerm) ||
+            (device.po_no || '').toLowerCase().includes(searchTerm) ||
+            (device.batch_no || '').toLowerCase().includes(searchTerm) ||
+            device.current_status.toLowerCase().includes(searchTerm)
+        );
+        
+        updateStockTable();
+    }, 300);
+}
+
+function showStockToast(message, type = 'success') {
+    // Use the main toast function if available
+    if (typeof showEmailToast === 'function') {
+        showEmailToast(message, type);
+    } else {
+        console.log(`${type.toUpperCase()}: ${message}`);
+    }
+}
+
 function readStockFileAsText(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -790,16 +1030,14 @@ function showStockImportResults(results) {
     const resultsDiv = document.getElementById('stockImportResults');
     if (!resultsDiv) return;
     
-    let html = '<h4 class="import-results-title">Import Results</h4>';
-    
-    // Summary
-    html += `
-        <div class="import-results-grid">
+    let html = `
+        <h4 class="text-body-l-semibold dark:text-dark-base-600 mb-4">Import Results</h4>
+        <div class="import-results-summary">
             <div class="import-result-stat success">
                 <div class="import-result-number" style="color: #10b981;">${results.successful}</div>
                 <div class="import-result-label" style="color: #10b981;">Successful</div>
             </div>
-            <div class="import-result-stat error">
+            <div class="import-result-stat failed">
                 <div class="import-result-number" style="color: #ef4444;">${results.failed}</div>
                 <div class="import-result-label" style="color: #ef4444;">Failed</div>
             </div>
@@ -836,157 +1074,20 @@ async function logCSVImport(type, filename, results) {
                 successful_imports: results.successful,
                 failed_imports: results.failed,
                 error_details: results.errors,
-                imported_by: userSession?.email || 'admin'
+                imported_by: window.userSession?.email || 'admin'
             }]);
     } catch (error) {
         console.error('❌ Error logging CSV import:', error);
     }
 }
 
-// Export stock CSV
-function exportStockCSV() {
-    if (stockDevices.length === 0) {
-        showStockToast('No stock data to export', 'error');
-        return;
-    }
-    
-    try {
-        const headers = [
-            'Sl. No.',
-            'PO No',
-            'Batch No.',
-            'Inward Date',
-            'Device Model No.',
-            'Device Registration Number',
-            'Device IMEI',
-            'Current Status',
-            'Device Condition',
-            'Created At'
-        ];
-        
-        const csvContent = [
-            headers.join(','),
-            ...stockDevices.map(device => [
-                device.sl_no || '',
-                device.po_no || '',
-                device.batch_no || '',
-                device.inward_date || '',
-                device.device_model_no || '',
-                device.device_registration_number || '',
-                device.device_imei || '',
-                device.current_status || '',
-                device.device_condition || '',
-                device.created_at ? new Date(device.created_at).toLocaleDateString() : ''
-            ].join(','))
-        ].join('\n');
-        
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `stock_export_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        showStockToast('Stock data exported successfully!', 'success');
-    } catch (error) {
-        console.error('❌ Error exporting stock CSV:', error);
-        showStockToast('Error exporting stock data', 'error');
-    }
-}
-
-// Edit stock device
-function editStockDevice(deviceId) {
-    const device = stockDevices.find(d => d.id === deviceId);
-    if (!device) {
-        showStockToast('Device not found', 'error');
-        return;
-    }
-    
-    // TODO: Implement edit functionality
-    showStockToast('Edit functionality coming soon', 'info');
-}
-
-// Delete stock device
-async function deleteStockDevice(deviceId) {
-    const device = stockDevices.find(d => d.id === deviceId);
-    if (!device) {
-        showStockToast('Device not found', 'error');
-        return;
-    }
-    
-    if (!confirm(`Are you sure you want to delete device "${device.device_registration_number}" from stock?`)) {
-        return;
-    }
-    
-    try {
-        const { error } = await supabase
-            .from('stock')
-            .delete()
-            .eq('id', deviceId);
-
-        if (error) {
-            console.error('❌ Error deleting stock device:', error);
-            showStockToast('Error deleting device: ' + error.message, 'error');
-            return;
-        }
-
-        showStockToast('Device deleted from stock successfully!', 'success');
-        loadStockData();
-        
-    } catch (error) {
-        console.error('❌ Error deleting stock device:', error);
-        showStockToast('Error deleting device from stock', 'error');
-    }
-}
-
-// Search functionality
-function handleStockSearch(e) {
-    const searchTerm = e.target.value.toLowerCase().trim();
-    
-    // Clear existing timeout
-    if (stockSearchTimeout) {
-        clearTimeout(stockSearchTimeout);
-    }
-    
-    // Debounce search for 300ms
-    stockSearchTimeout = setTimeout(() => {
-        performStockSearch(searchTerm);
-    }, 300);
-}
-
-function performStockSearch(searchTerm) {
-    if (!searchTerm) {
-        filteredStockDevices = [...stockDevices];
-    } else {
-        filteredStockDevices = stockDevices.filter(device => {
-            return (
-                (device.device_registration_number && device.device_registration_number.toLowerCase().includes(searchTerm)) ||
-                (device.device_imei && device.device_imei.toLowerCase().includes(searchTerm)) ||
-                (device.device_model_no && device.device_model_no.toLowerCase().includes(searchTerm)) ||
-                (device.po_no && device.po_no.toLowerCase().includes(searchTerm)) ||
-                (device.batch_no && device.batch_no.toLowerCase().includes(searchTerm)) ||
-                (device.current_status && device.current_status.toLowerCase().includes(searchTerm)) ||
-                (device.device_condition && device.device_condition.toLowerCase().includes(searchTerm))
-            );
-        });
-    }
-    
-    updateStockTable();
-}
-
-// Show stock toast notification
-function showStockToast(message, type = 'info') {
-    // Use the existing toast system
-    showEmailToast(message);
-}
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize stock management after a short delay to ensure other systems are ready
-    setTimeout(() => {
-        initializeStockManagement();
-    }, 1500);
-});
+// Make functions globally available
+window.initializeStockManagement = initializeStockManagement;
+window.showAddStockForm = showAddStockForm;
+window.closeAddStockForm = closeAddStockForm;
+window.showImportStockCSV = showImportStockCSV;
+window.closeStockCSVImportModal = closeStockCSVImportModal;
+window.exportStockCSV = exportStockCSV;
+window.editStockDevice = editStockDevice;
+window.deleteStockDevice = deleteStockDevice;
+window.closeEditStockForm = closeEditStockForm;
